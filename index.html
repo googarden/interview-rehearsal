@@ -425,6 +425,11 @@ header.top { align-items: center; }
 .prep b { font-family: var(--font-mono); font-size: 2rem; line-height: 1; color: var(--accent); min-width: 1.6em; text-align: center; font-variant-numeric: tabular-nums; }
 .prep span { flex: 1; font-size: .9rem; }
 
+/* voice typing help */
+.voice-help { font-size: .84rem; }
+.voice-help summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.voice-help ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; line-height: 1.55; }
+
 /* recorded-video analysis */
 .howto { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .84rem; color: var(--fg); line-height: 1.55; }
 .vid-drop { padding: 14px 12px; }
@@ -702,6 +707,17 @@ header.top { align-items: center; }
             </div>
             <input type="file" id="vid-file" accept="video/*,.mp4,.webm,.mov,.m4v" hidden>
             <p class="status-line" id="vid-status"></p>
+            <details class="voice-help">
+              <summary>음성 입력(Win+H)이 잘 안 될 때</summary>
+              <ul>
+                <li><b>온라인 음성 인식 켜기:</b> 설정 › 개인 정보 및 보안 › 음성 › ‘온라인 음성 인식’을 켜세요. 꺼져 있으면 정확도가 크게 떨어져요.</li>
+                <li><b>한국어 상태 확인:</b> 답변 칸을 누른 뒤 한/영 키로 한글 상태인지 확인하고 Win+H를 누르세요.</li>
+                <li><b>마이크 고르기:</b> 설정 › 시스템 › 소리 › 입력에서 쓰는 마이크를 고르고 소리가 잡히는지 보세요. 노트북 내장 마이크보다 이어폰 마이크가 훨씬 정확해요.</li>
+                <li><b>끊기면 다시 켜기:</b> 말을 몇 초 멈추면 음성 입력이 꺼져요. 다시 Win+H를 누르세요.</li>
+                <li><b>스피커 소리 주의:</b> 질문 읽어 주기 소리까지 받아 적을 수 있어요. 이어폰을 쓰세요.</li>
+                <li><b>틀린 단어는 고치기:</b> 다 말한 뒤 ‘받아쓰기 다듬기’를 누르면 잘못 들린 단어만 문맥에 맞게 고쳐요. 내용은 바꾸지 않아요.</li>
+              </ul>
+            </details>
             <p class="hint" style="margin:0">말로 답하려면 답변 칸을 누르고 <b>Win+H</b>를 누르세요. 질문 읽어 주기 소리가 녹음에 섞이면 말 속도 측정이 부정확해지니 이어폰을 쓰면 좋아요. 영상은 이 브라우저 안에서만 분석하고, 고른 장면 사진 몇 장만 AI에 보내요.</p>
           </div>
           </aside>
@@ -1516,6 +1532,7 @@ function interviewerPrompt(max) {
 - 이미 충분히 확인된 것은 다시 묻지 마세요. 의문이 풀렸으면 resolved를 true로 하세요.
 - 지원자가 모른다고 하거나 답을 피하면 ${iv.mode === "pressure" ? "그 점을 지적하며 한 번 더 몰아붙이되, 같은 질문을 세 번 반복하지는 마세요" : "다른 각도로 한 번만 더 묻고, 그래도 안 되면 넘어가세요"}.
 - 꼬리 질문은 지금까지 ${iv.follow}번 했고 최대 ${max}번입니다.${iv.follow >= max ? " 이번에는 반드시 resolved를 true로 하세요." : ""}
+- 지원자 답변은 음성 인식으로 받아 적은 것일 수 있어 잘못 인식된 단어나 띄어쓰기 오류가 섞여 있을 수 있습니다. 문맥으로 이해하고, 받아쓰기 오류 자체를 지적하거나 묻지 마세요.
 - 실제 면접관이 말하듯 한두 문장의 구어체로 쓰세요. 답을 알려 주거나 조언하지 마세요.${iv.mode === "pressure" ? `
 
 압박 면접 추가 규칙:
@@ -1537,7 +1554,7 @@ ${contextBlock(cur())}
 ${transcript()}`;
 }
 function feedbackPrompt() {
-  return `당신은 면접 코치입니다. 아래는 ${iv.mode === "pressure" ? "압박 면접" : "면접"}에서 한 질문을 두고 오간 문답 전체입니다. 지원자의 대응을 평가하세요.
+  return `당신은 면접 코치입니다. 아래는 ${iv.mode === "pressure" ? "압박 면접" : "면접"}에서 한 질문을 두고 오간 문답 전체입니다. 지원자의 대응을 평가하세요. 지원자 답변은 음성 인식으로 받아 적은 것일 수 있으니, 잘못 인식된 단어나 띄어쓰기는 평가하지 말고 문맥상 의도한 내용으로 평가하세요.
 
 한국어로, 마크다운 기호(#, *, **) 없이 아래 형식 그대로 간결하게 답하세요.
 점수: 10점 만점에 N점
@@ -1575,6 +1592,7 @@ function renderStage() {
       </div>
       <div class="stage-actions">
         <button class="btn primary" id="iv-send">답변 보내기</button>
+        ${sampleFn ? `<button class="btn" id="iv-fix" title="음성 인식으로 잘못 적힌 말을 문맥에 맞게 고쳐요">받아쓰기 다듬기</button>` : ""}
         ${canVoice ? `<button class="btn" id="iv-mic">받아쓰기 멈춤</button>` : ""}
         <button class="btn ghost" id="iv-finish">이 질문 끝내기</button>
         <button class="btn ghost" id="iv-quit">면접 종료</button>
@@ -1614,6 +1632,27 @@ function renderStage() {
   on("iv-quit", endInterview);
   on("iv-retry", askFollow);
   on("iv-stop", () => iv.ctl && iv.ctl.abort());
+  on("iv-fix", async () => {
+    const b = $("#iv-fix"); const ta = $("#iv-input");
+    if (!b || !ta) return;
+    if (iv.fixUndo != null) {   // second click: back to what was dictated
+      ta.value = iv.draft = iv.fixUndo; iv.fixUndo = null; b.textContent = "받아쓰기 다듬기"; return;
+    }
+    const text = ta.value.trim();
+    if (text.length < 5) { ta.focus(); return; }
+    b.disabled = true; b.textContent = "다듬는 중…";
+    try {
+      const out = await fixTranscript(text, iv.turns[iv.turns.length - 1].text);
+      if (iv.phase !== "answer" || !ta.isConnected) return;
+      iv.fixUndo = text;
+      ta.value = iv.draft = out;
+      b.textContent = "다듬기 전으로";
+    } catch (e) {
+      b.textContent = "받아쓰기 다듬기";
+      caption(aiError(e, "받아쓰기를 다듬지 못했어요."));
+    } finally { b.disabled = false; }
+  });
+  iv.fixUndo = null;
   on("iv-skip-prep", () => { if (typeof iv.hold === "number") iv.hold = performance.now(); });
   on("iv-mic", () => { if (media.wantListen) stopListening(); else { if (!media.ans) beginAnswer(); startListening(); } });
   updateListenUI();
@@ -1643,6 +1682,26 @@ function renderStage() {
   }
 }
 
+/* Speech recognition often mishears words; fix only those, keeping what the candidate actually said. */
+async function fixTranscript(text, question) {
+  const r = R();
+  const prompt = `아래는 면접 질문에 대한 지원자의 답변을 음성 인식으로 받아 적은 글입니다. 잘못 인식된 단어, 띄어쓰기, 문장부호만 바로잡으세요.
+
+규칙:
+- 지원자가 말한 내용과 순서를 그대로 두세요. 내용을 더하거나 빼거나 문장을 더 매끄럽게 다듬지 마세요.
+- 소리가 비슷해서 잘못 적힌 단어는 질문, 지원 기업·직무, 자기소개서 문맥에 맞는 단어로 고치세요.
+- 고친 답변 글만 출력하세요. 설명이나 따옴표는 쓰지 마세요.
+
+[질문] ${question}
+[지원] ${[r.company, r.role].filter(Boolean).join(" · ") || "-"}
+[자기소개서 일부]
+${(r.text || "").trim().slice(0, 3000) || "(없음)"}
+
+[받아 적은 답변]
+${text}`;
+  const { text: out } = await sampleFn(prompt, { modelTier: "quick", cache: false });
+  return out.trim().replace(/^["“]|["”]$/g, "");
+}
 function sendAnswer() {
   if (iv.hold) { iv.hold = null; if (iv.prepDone) iv.prepDone(); if (TTS) speechSynthesis.cancel(); }
   if (media.interim && media.interim.trim()) iv.draft = (iv.draft ? iv.draft + " " : "") + media.interim.trim();
@@ -3513,6 +3572,7 @@ async function onInterviewerTurn() {
   iv.start = performance.now();
   { const c = $("#mclock"); if (c) c.textContent = "00:00"; }
   beginAnswer(); startListening();
+  if (!media.listening) { const ta = $("#iv-input"); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }
   caption(media.listening ? "답변을 듣고 있어요. 다 말했으면 ‘답변 보내기’를 누르세요." : "답변을 적거나 말해 주세요.");
 }
 async function endMediaSession() {

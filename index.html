@@ -420,6 +420,33 @@ header.top { align-items: center; }
 .mic-meter i { display: block; height: 100%; width: 0; background: #4cc3a0; transition: width .1s; }
 @media (prefers-reduced-motion: reduce) { .iv-person.speaking .mouth-open { animation: none; opacity: 1; } }
 
+/* preparation countdown before each answer */
+.prep { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; }
+.prep b { font-family: var(--font-mono); font-size: 2rem; line-height: 1; color: var(--accent); min-width: 1.6em; text-align: center; font-variant-numeric: tabular-nums; }
+.prep span { flex: 1; font-size: .9rem; }
+
+/* model answer editing */
+.ans-edit { display: grid; gap: 8px; }
+.ans-edit textarea { width: 100%; resize: vertical; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); line-height: 1.7; font: inherit; }
+.ans-edit .ae-a { min-height: 180px; }
+.ans-edit .ae-p { min-height: 70px; font-size: .9rem; }
+.ae-pl { display: grid; gap: 4px; font-size: .84rem; font-weight: 500; }
+.ae-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* voice typing help */
+.voice-help { font-size: .84rem; }
+.voice-help summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.voice-help ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; line-height: 1.55; }
+
+/* recorded-video analysis */
+.howto { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .84rem; color: var(--fg); line-height: 1.55; }
+.vid-drop { padding: 14px 12px; }
+.vid-panel { display: grid; gap: 10px; }
+.frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.frames figure { margin: 0; display: grid; gap: 2px; }
+.frames img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.frames figcaption { font-size: .7rem; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+
 /* live speaking metrics */
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .metric { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--surface); display: grid; gap: 1px; }
@@ -654,16 +681,52 @@ header.top { align-items: center; }
                 <option value="120">120초</option>
               </select>
             </label>
+            <label>답변 준비 시간
+              <select id="mock-prep">
+                <option value="0">없음</option>
+                <option value="5">5초</option>
+                <option value="10" selected>10초</option>
+                <option value="15">15초</option>
+                <option value="30">30초</option>
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" id="mock-prep-follow"> 꼬리질문에도 준비 시간 주기</label>
             <label class="check"><input type="checkbox" id="mock-weak"> 자신 있는 질문 빼기</label>
             <div class="media-opts" id="media-opts" hidden>
-              <p class="label" style="margin:6px 0 0">카메라·마이크</p>
-              <label class="check"><input type="checkbox" id="md-cam" checked> 녹화하고 시선·표정 분석</label>
+              <p class="label" style="margin:6px 0 0" id="md-label">카메라·마이크</p>
+              <label class="check" id="md-cam-row"><input type="checkbox" id="md-cam" checked> 녹화하고 시선·표정 분석</label>
               <label class="check" id="md-stt-row"><input type="checkbox" id="md-stt" checked> 말로 답하기 (자동 받아쓰기)</label>
               <label class="check" id="md-tts-row"><input type="checkbox" id="md-tts" checked> 면접관이 질문을 소리 내어 읽기</label>
               <button class="btn" type="button" id="md-test">카메라·마이크 확인</button>
               <p class="hint" id="md-status" style="margin:0"></p>
             </div>
             <button class="btn primary" id="mock-start">면접 시작</button>
+          </div>
+          <div class="panel vid-panel" id="vid-panel">
+            <p class="label" style="margin:0">녹화 영상으로 태도 분석</p>
+            <ol class="howto">
+              <li>윈도우 <b>카메라</b> 앱을 열고 <b>동영상</b> 모드로 바꿔요.</li>
+              <li>카메라 앱 창을 화면 한쪽에 띄워 둔 채 녹화를 시작하고, 여기서 모의 면접을 해요.</li>
+              <li>끝나면 녹화를 멈추고, <b>사진 › 카메라 앨범</b> 폴더에 저장된 영상을 아래에 올려요.</li>
+            </ol>
+            <div class="drop vid-drop" id="vid-drop" role="button" tabindex="0" aria-label="녹화 영상 올리기">
+              <b>녹화 영상 올리기</b>
+              <span>MP4 · WEBM · MOV 파일을 끌어다 놓거나 눌러서 고르세요</span>
+            </div>
+            <input type="file" id="vid-file" accept="video/*,.mp4,.webm,.mov,.m4v" hidden>
+            <p class="status-line" id="vid-status"></p>
+            <details class="voice-help">
+              <summary>음성 입력(Win+H)이 잘 안 될 때</summary>
+              <ul>
+                <li><b>온라인 음성 인식 켜기:</b> 설정 › 개인 정보 및 보안 › 음성 › ‘온라인 음성 인식’을 켜세요. 꺼져 있으면 정확도가 크게 떨어져요.</li>
+                <li><b>한국어 상태 확인:</b> 답변 칸을 누른 뒤 한/영 키로 한글 상태인지 확인하고 Win+H를 누르세요.</li>
+                <li><b>마이크 고르기:</b> 설정 › 시스템 › 소리 › 입력에서 쓰는 마이크를 고르고 소리가 잡히는지 보세요. 노트북 내장 마이크보다 이어폰 마이크가 훨씬 정확해요.</li>
+                <li><b>끊기면 다시 켜기:</b> 말을 몇 초 멈추면 음성 입력이 꺼져요. 다시 Win+H를 누르세요.</li>
+                <li><b>스피커 소리 주의:</b> 질문 읽어 주기 소리까지 받아 적을 수 있어요. 이어폰을 쓰세요.</li>
+                <li><b>틀린 단어는 고치기:</b> 다 말한 뒤 ‘받아쓰기 다듬기’를 누르면 잘못 들린 단어만 문맥에 맞게 고쳐요. 내용은 바꾸지 않아요.</li>
+              </ul>
+            </details>
+            <p class="hint" style="margin:0">말로 답하려면 답변 칸을 누르고 <b>Win+H</b>를 누르세요. 질문 읽어 주기 소리가 녹음에 섞이면 말 속도 측정이 부정확해지니 이어폰을 쓰면 좋아요. 영상은 이 브라우저 안에서만 분석하고, 고른 장면 사진 몇 장만 AI에 보내요.</p>
           </div>
           </aside>
           <div class="main-col">
@@ -1116,7 +1179,7 @@ function renderList() {
           <div class="meta"><span>소리 내어 읽으면 약 ${Math.max(0, Math.round((p.my || "").replace(/\s/g, "").length / 5.5))}초</span><span data-len="${x.id}">${(p.my || "").length}자</span></div>
         </div>
         <div class="answer ${locked ? "locked" : ""}">
-          <div class="answer-inner">${answerHTML(x)}</div>
+          <div class="answer-inner">${state.editingAns === x.id && !locked ? answerEditHTML(x) : answerHTML(x)}</div>
           ${locked ? `<div class="reveal"><button class="btn primary" data-reveal="${x.id}">모범 답안 보기</button></div>` : ""}
         </div>
         ${fb ? `<div class="feedback ${fb.err ? "err" : ""}" data-fb="${x.id}">${esc(fb.text)}</div>` : ""}
@@ -1130,6 +1193,7 @@ function renderList() {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn primary" data-practice="${x.id}">꼬리질문 연습</button>
+            ${!locked && state.editingAns !== x.id ? `<button class="btn" data-ae-open="${x.id}">모범 답안 수정</button>` : ""}
             ${!locked ? `<button class="btn ghost" data-hide="${x.id}">답안 가리기</button>` : ""}
             ${sampleFn ? (fb && fb.busy
               ? `<button class="btn" data-stopfb="${x.id}">멈추기</button>`
@@ -1156,17 +1220,64 @@ function renderList() {
 }
 
 /* Built-in 인성 answers can be rewritten from the current folder's resume. */
+/* Which model answer to show: my own edit > resume-tailored > the original.
+   Built-in questions keep edits per folder; custom questions are edited in place (original kept in aOrig). */
+const myEdit = (x) => { const f = F(); return !x.custom && f && f.myAnswers && f.myAnswers[x.id]; };
 const ansOf = (x) => {
-  const f = F();
-  return (!x.custom && f && f.tailored && f.tailored[x.id]) || x.a;
+  const f = F(); const e = myEdit(x);
+  return (e && e.a) || (!x.custom && f && f.tailored && f.tailored[x.id]) || x.a;
 };
+const pointsOf = (x) => { const e = myEdit(x); return (e && e.points) || x.points || []; };
+const isEdited = (x) => !!myEdit(x) || (x.custom && x.aOrig != null);
 function answerHTML(x) {
-  const tailored = ansOf(x) !== x.a;
+  const edited = isEdited(x);
+  const tailored = !edited && ansOf(x) !== x.a;
+  const base = x.custom ? x.aOrig : x.a;
+  const pts = pointsOf(x);
   return `
-    <h4>모범 답안${tailored ? `<span class="tag">내 자소서 맞춤</span>` : ""}</h4>
+    <h4>모범 답안${edited ? `<span class="tag">내가 수정함</span>` : tailored ? `<span class="tag">내 자소서 맞춤</span>` : ""}</h4>
     <p>${esc(ansOf(x))}</p>
-    ${x.points && x.points.length ? `<ul>${x.points.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
-    ${tailored ? `<details class="base-answer"><summary>기본 모범 답안 보기</summary><p>${esc(x.a)}</p></details>` : ""}`;
+    ${pts.length ? `<ul>${pts.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${(edited || tailored) && base ? `<details class="base-answer"><summary>원래 모범 답안 보기</summary><p>${esc(base)}</p></details>` : ""}`;
+}
+const draftOr = (k, v) => (state.aeDraft && state.aeDraft[k] != null ? state.aeDraft[k] : v);
+function answerEditHTML(x) {
+  const p = prog(x.id);
+  return `
+    <div class="ans-edit">
+      <h4>모범 답안 수정</h4>
+      <textarea id="ae-a-${x.id}" class="ae-a">${esc(draftOr("ae-a-" + x.id, ansOf(x)))}</textarea>
+      <label class="ae-pl">핵심 포인트 <span class="hint">(줄마다 하나)</span>
+        <textarea id="ae-p-${x.id}" class="ae-p">${esc(draftOr("ae-p-" + x.id, pointsOf(x).join("\n")))}</textarea>
+      </label>
+      <div class="ae-actions">
+        <button class="btn primary" type="button" data-ae-save="${x.id}">저장</button>
+        <button class="btn ghost" type="button" data-ae-cancel="${x.id}">취소</button>
+        ${(p.my || "").trim() ? `<button class="btn" type="button" data-ae-mine="${x.id}" title="‘내 답변’ 칸의 글을 가져와요">내 답변 가져오기</button>` : ""}
+        ${isEdited(x) ? `<button class="btn ghost danger" type="button" data-ae-reset="${x.id}">원래 답안으로 되돌리기</button>` : ""}
+      </div>
+    </div>`;
+}
+function saveAnswerEdit(id, a, points) {
+  const f = F(); const x = allQ().find((y) => y.id === id); if (!x) return;
+  if (x.custom) {
+    const c = state.custom.find((y) => y.id === id);
+    if (c.aOrig == null) { c.aOrig = c.a; c.pointsOrig = c.points || []; }
+    c.a = a; c.points = points;
+    flush("custom");
+  } else if (f) {
+    f.myAnswers = { ...(f.myAnswers || {}), [id]: { a, points, at: Date.now() } };
+    saveFolderSoon(f.id, 200);
+  }
+}
+function resetAnswerEdit(id) {
+  const f = F(); const x = allQ().find((y) => y.id === id); if (!x) return;
+  if (x.custom) {
+    const c = state.custom.find((y) => y.id === id);
+    if (c.aOrig != null) { c.a = c.aOrig; c.points = c.pointsOrig || []; delete c.aOrig; delete c.pointsOrig; flush("custom"); }
+  } else if (f && f.myAnswers) {
+    const { [id]: _, ...rest } = f.myAnswers; f.myAnswers = rest; saveFolderSoon(f.id, 200);
+  }
 }
 const parseScore = (t) => { const m = /점수\s*[:：]\s*(\d+(?:\.\d+)?)/.exec(t || ""); return m ? Math.min(10, +m[1]) : null; };
 function recordScore(id, score, feedback, extra) {
@@ -1191,7 +1302,21 @@ $("#qlist").addEventListener("click", (e) => {
   const d = b.dataset;
   if (d.toggle) { state.open.has(d.toggle) ? state.open.delete(d.toggle) : state.open.add(d.toggle); renderList(); }
   else if (d.reveal) { state.revealed.add(d.reveal); renderList(); }
-  else if (d.hide) { state.revealed.delete(d.hide); renderList(); }
+  else if (d.hide) { state.revealed.delete(d.hide); if (state.editingAns === d.hide) state.editingAns = null; renderList(); }
+  else if (d.aeOpen) { state.aeDraft = {}; state.editingAns = d.aeOpen; renderList(); const ta = $("#ae-a-" + d.aeOpen); if (ta) ta.focus(); }
+  else if (d.aeCancel) { state.editingAns = null; state.aeDraft = {}; renderList(); }
+  else if (d.aeMine) { const ta = $("#ae-a-" + d.aeMine); if (ta) { ta.value = prog(d.aeMine).my || ""; ta.focus(); } }
+  else if (d.aeSave) {
+    const a = ($("#ae-a-" + d.aeSave).value || "").trim();
+    if (!a) { $("#ae-a-" + d.aeSave).focus(); return; }
+    const points = ($("#ae-p-" + d.aeSave).value || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 8);
+    saveAnswerEdit(d.aeSave, a, points);
+    state.editingAns = null; state.aeDraft = {}; renderList();
+  }
+  else if (d.aeReset) {
+    if (!b.dataset.confirm) { b.dataset.confirm = "1"; b.textContent = "정말 되돌리기"; return; }
+    resetAnswerEdit(d.aeReset); state.editingAns = null; renderList();
+  }
   else if (d.setst) { setStatus(d.setst, +d.v); renderList(); }
   else if (d.goto) { switchView(d.goto); }
   else if (d.ai) { askFeedback(d.ai); }
@@ -1265,6 +1390,7 @@ $("#more-q").addEventListener("click", async () => {
   renderList();
 });
 $("#qlist").addEventListener("input", (e) => {
+  if (/^ae-[ap]-/.test(e.target.id || "")) { state.aeDraft = { ...(state.aeDraft || {}), [e.target.id]: e.target.value }; return; }
   const id = e.target.dataset.my; if (!id) return;
   state.progress[id] = { ...prog(id), my: e.target.value, t: Date.now() };
   const len = document.querySelector(`[data-len="${id}"]`); if (len) len.textContent = e.target.value.length + "자";
@@ -1434,12 +1560,13 @@ $("#mock-start").addEventListener("click", () => {
 function startInterview(deck) {
   if (!folderReady(F())) { iv.phase = "idle"; renderIvIdle(); return; }
   stopIv();
-  iv.deck = deck; iv.i = 0; iv.tally = [0, 0, 0]; iv.scores = [];
+  iv.deck = deck; iv.i = 0; iv.tally = [0, 0, 0]; iv.scores = []; iv.log = [];
   iv.mode = ($('input[name="mock-mode"]:checked') || {}).value || "normal"; iv.limit = +$("#mock-time").value;
   iv.phase = "starting";
   beginMediaSession().then(askQ);
 }
 function stopIv() {
+  iv.hold = null;
   cancelAnimationFrame(iv.raf);
   if (iv.ctl) iv.ctl.abort();
   if (iv.fbCtl) iv.fbCtl.abort();
@@ -1476,6 +1603,7 @@ function interviewerPrompt(max) {
 - 이미 충분히 확인된 것은 다시 묻지 마세요. 의문이 풀렸으면 resolved를 true로 하세요.
 - 지원자가 모른다고 하거나 답을 피하면 ${iv.mode === "pressure" ? "그 점을 지적하며 한 번 더 몰아붙이되, 같은 질문을 세 번 반복하지는 마세요" : "다른 각도로 한 번만 더 묻고, 그래도 안 되면 넘어가세요"}.
 - 꼬리 질문은 지금까지 ${iv.follow}번 했고 최대 ${max}번입니다.${iv.follow >= max ? " 이번에는 반드시 resolved를 true로 하세요." : ""}
+- 지원자 답변은 음성 인식으로 받아 적은 것일 수 있어 잘못 인식된 단어나 띄어쓰기 오류가 섞여 있을 수 있습니다. 문맥으로 이해하고, 받아쓰기 오류 자체를 지적하거나 묻지 마세요.
 - 실제 면접관이 말하듯 한두 문장의 구어체로 쓰세요. 답을 알려 주거나 조언하지 마세요.${iv.mode === "pressure" ? `
 
 압박 면접 추가 규칙:
@@ -1497,7 +1625,7 @@ ${contextBlock(cur())}
 ${transcript()}`;
 }
 function feedbackPrompt() {
-  return `당신은 면접 코치입니다. 아래는 ${iv.mode === "pressure" ? "압박 면접" : "면접"}에서 한 질문을 두고 오간 문답 전체입니다. 지원자의 대응을 평가하세요.
+  return `당신은 면접 코치입니다. 아래는 ${iv.mode === "pressure" ? "압박 면접" : "면접"}에서 한 질문을 두고 오간 문답 전체입니다. 지원자의 대응을 평가하세요. 지원자 답변은 음성 인식으로 받아 적은 것일 수 있으니, 잘못 인식된 단어나 띄어쓰기는 평가하지 말고 문맥상 의도한 내용으로 평가하세요.
 
 한국어로, 마크다운 기호(#, *, **) 없이 아래 형식 그대로 간결하게 답하세요.
 점수: 10점 만점에 N점
@@ -1528,12 +1656,14 @@ function renderStage() {
     bottom = `
       <div class="compose">
         <div class="timer" id="mtimer"><span class="clock" id="mclock">00:00</span><div class="tbar"><i id="mbar"></i></div><span class="hint">/ ${fmt(iv.limit)}</span></div>
+        <div class="prep" id="iv-prep" ${typeof iv.hold === "number" ? "" : "hidden"}><b id="prep-n">${typeof iv.hold === "number" ? Math.max(0, Math.ceil((iv.hold - performance.now()) / 1000)) : ""}</b><span>초 동안 답변을 준비하세요. 메모해도 돼요.</span><button class="btn" type="button" id="iv-skip-prep">바로 답하기</button></div>
         <textarea id="iv-input" placeholder="${canVoice ? "말하면 여기에 자동으로 받아 적어요. 직접 고쳐도 돼요." : "답변을 적거나 음성 입력으로 말해 보세요. (Windows: Win+H)"}">${esc(iv.draft)}</textarea>
         ${canVoice ? `<p class="interim" id="iv-interim" style="margin:0;min-height:1.4em"></p>` : ""}
         <div class="row-meta"><span>${canVoice ? `<span class="listen-state" id="iv-listen" hidden>듣고 있어요</span> ` : ""}Ctrl+Enter로 보내기</span><span>${sampleFn ? (iv.follow ? `꼬리 질문 ${iv.follow}번째` : "답하면 면접관이 꼬리 질문을 이어 가요") : "AI를 쓸 수 없어 꼬리 질문 없이 진행돼요"}</span></div>
       </div>
       <div class="stage-actions">
         <button class="btn primary" id="iv-send">답변 보내기</button>
+        ${sampleFn ? `<button class="btn" id="iv-fix" title="음성 인식으로 잘못 적힌 말을 문맥에 맞게 고쳐요">받아쓰기 다듬기</button>` : ""}
         ${canVoice ? `<button class="btn" id="iv-mic">받아쓰기 멈춤</button>` : ""}
         <button class="btn ghost" id="iv-finish">이 질문 끝내기</button>
         <button class="btn ghost" id="iv-quit">면접 종료</button>
@@ -1573,6 +1703,28 @@ function renderStage() {
   on("iv-quit", endInterview);
   on("iv-retry", askFollow);
   on("iv-stop", () => iv.ctl && iv.ctl.abort());
+  on("iv-fix", async () => {
+    const b = $("#iv-fix"); const ta = $("#iv-input");
+    if (!b || !ta) return;
+    if (iv.fixUndo != null) {   // second click: back to what was dictated
+      ta.value = iv.draft = iv.fixUndo; iv.fixUndo = null; b.textContent = "받아쓰기 다듬기"; return;
+    }
+    const text = ta.value.trim();
+    if (text.length < 5) { ta.focus(); return; }
+    b.disabled = true; b.textContent = "다듬는 중…";
+    try {
+      const out = await fixTranscript(text, iv.turns[iv.turns.length - 1].text);
+      if (iv.phase !== "answer" || !ta.isConnected) return;
+      iv.fixUndo = text;
+      ta.value = iv.draft = out;
+      b.textContent = "다듬기 전으로";
+    } catch (e) {
+      b.textContent = "받아쓰기 다듬기";
+      caption(aiError(e, "받아쓰기를 다듬지 못했어요."));
+    } finally { b.disabled = false; }
+  });
+  iv.fixUndo = null;
+  on("iv-skip-prep", () => { if (typeof iv.hold === "number") iv.hold = performance.now(); });
   on("iv-mic", () => { if (media.wantListen) stopListening(); else { if (!media.ans) beginAnswer(); startListening(); } });
   updateListenUI();
   $("#mock-stage").querySelectorAll("[data-rate]").forEach((b) => b.onclick = () => {
@@ -1584,8 +1736,14 @@ function renderStage() {
     ta.oninput = () => { iv.draft = ta.value; };
     ta.onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAnswer(); } };
     const tick = () => {
-      const s = (performance.now() - iv.start) / 1000;
       const c = $("#mclock"); if (!c) return;
+      if (iv.hold) {   // the answer clock waits while the question is read and during preparation time
+        c.textContent = iv.hold === "listen" ? "질문 중" : "준비 " + Math.max(0, Math.ceil((iv.hold - performance.now()) / 1000));
+        $("#mbar").style.width = "0%"; $("#mtimer").classList.remove("over");
+        iv.raf = requestAnimationFrame(tick);
+        return;
+      }
+      const s = (performance.now() - iv.start) / 1000;
       c.textContent = fmt(s);
       $("#mbar").style.width = Math.min(100, s / iv.limit * 100) + "%";
       $("#mtimer").classList.toggle("over", s > iv.limit);
@@ -1595,7 +1753,28 @@ function renderStage() {
   }
 }
 
+/* Speech recognition often mishears words; fix only those, keeping what the candidate actually said. */
+async function fixTranscript(text, question) {
+  const r = R();
+  const prompt = `아래는 면접 질문에 대한 지원자의 답변을 음성 인식으로 받아 적은 글입니다. 잘못 인식된 단어, 띄어쓰기, 문장부호만 바로잡으세요.
+
+규칙:
+- 지원자가 말한 내용과 순서를 그대로 두세요. 내용을 더하거나 빼거나 문장을 더 매끄럽게 다듬지 마세요.
+- 소리가 비슷해서 잘못 적힌 단어는 질문, 지원 기업·직무, 자기소개서 문맥에 맞는 단어로 고치세요.
+- 고친 답변 글만 출력하세요. 설명이나 따옴표는 쓰지 마세요.
+
+[질문] ${question}
+[지원] ${[r.company, r.role].filter(Boolean).join(" · ") || "-"}
+[자기소개서 일부]
+${(r.text || "").trim().slice(0, 3000) || "(없음)"}
+
+[받아 적은 답변]
+${text}`;
+  const { text: out } = await sampleFn(prompt, { modelTier: "quick", cache: false });
+  return out.trim().replace(/^["“]|["”]$/g, "");
+}
 function sendAnswer() {
+  if (iv.hold) { iv.hold = null; if (iv.prepDone) iv.prepDone(); if (TTS) speechSynthesis.cancel(); }
   if (media.interim && media.interim.trim()) iv.draft = (iv.draft ? iv.draft + " " : "") + media.interim.trim();
   const text = (iv.draft || "").trim();
   if (!text) { const ta = $("#iv-input"); if (ta) ta.focus(); return; }
@@ -1642,12 +1821,14 @@ function finishQ() {
   cancelAnimationFrame(iv.raf);
   iv.phase = "done";
   if (iv.ctl) iv.ctl.abort();
+  iv.hold = null;
   stopListening(); media.ans = null;
   if (TTS) speechSynthesis.cancel();
   setSpeaker("", false); caption("이 질문은 여기까지예요");
   const x = cur();
   const answered = iv.turns.some((t) => t.role === "me");
   if (answered) {
+    iv.log = (iv.log || []).concat([{ q: x.q, answers: iv.turns.filter((t) => t.role === "me").map((t) => t.text) }]);
     state.progress[x.id] = { ...prog(x.id), t: Date.now(), last: {
       mode: iv.mode, at: Date.now(),
       turns: iv.turns.slice(-16).map((t) => ({ role: t.role, text: String(t.text).slice(0, 2000), doubt: t.doubt || "", ...(t.metrics ? { m: t.metrics } : {}) })),
@@ -3119,7 +3300,7 @@ if (TTS) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
 function speak(text, id) {
   return new Promise((resolve) => {
-    if (!TTS || !$("#md-tts").checked || IN_ARTIFACT) { resolve(); return; }
+    if (!TTS || !$("#md-tts").checked) { resolve(); return; }
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     const p = who(id);
@@ -3433,12 +3614,36 @@ async function onInterviewerTurn() {
   if (!t || t.role !== "iv" || iv.phase !== "answer") return;
   stopListening(); media.ans = null;
   const p = who(t.who);
+  const still = () => iv.phase === "answer" && iv.turns[iv.turns.length - 1] === t;
   setSpeaker(t.who, false);
   caption(`${p.name}(${p.role})이 질문하고 있어요`);
+  iv.hold = "listen";
   await speak(t.text, t.who);
-  if (iv.phase !== "answer" || iv.turns[iv.turns.length - 1] !== t) return;
+  if (!still()) return;
+  const isFollow = iv.turns.indexOf(t) > 0;
+  const prep = isFollow && !$("#mock-prep-follow").checked ? 0 : +$("#mock-prep").value;
+  if (prep > 0) {
+    caption(`${prep}초 동안 답변을 준비하세요`);
+    iv.hold = performance.now() + prep * 1000;
+    const box = $("#iv-prep"); if (box) box.hidden = false;
+    await new Promise((res) => {
+      iv.prepDone = res;
+      const id = setInterval(() => {
+        if (!still() || !iv.hold || performance.now() >= iv.hold) { clearInterval(id); res(); return; }
+        const left = Math.ceil((iv.hold - performance.now()) / 1000);
+        const n = $("#prep-n"); if (n) n.textContent = left;
+        const c = $("#mclock"); if (c) c.textContent = "준비 " + left;
+      }, 200);
+    });
+    iv.prepDone = null;
+    const b2 = $("#iv-prep"); if (b2) b2.hidden = true;
+    if (!still()) return;
+  }
+  iv.hold = null;
   iv.start = performance.now();
+  { const c = $("#mclock"); if (c) c.textContent = "00:00"; }
   beginAnswer(); startListening();
+  if (!media.listening) { const ta = $("#iv-input"); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }
   caption(media.listening ? "답변을 듣고 있어요. 다 말했으면 ‘답변 보내기’를 누르세요." : "답변을 적거나 말해 주세요.");
 }
 async function endMediaSession() {
@@ -3470,9 +3675,143 @@ ${list.map((x, i) => `${i + 1}. ${x.q}\n   ${metricsText(x.m) || "측정값 없�
 
 /* ---------- mock-interview setup panel ---------- */
 function renderMediaOpts() {
-  $("#media-opts").hidden = !media.supported;
-  $("#md-stt-row").hidden = !Rec;
+  const live = media.supported;   // camera/mic only outside claude.ai; question reading works everywhere
+  $("#media-opts").hidden = !(live || TTS);
+  $("#md-label").textContent = live ? "카메라·마이크" : "음성";
+  $("#md-cam-row").hidden = !live;
+  $("#md-stt-row").hidden = !live || !Rec;
+  $("#md-test").hidden = !live;
   $("#md-tts-row").hidden = !TTS;
+}
+
+/* ---------- recorded-video analysis: works inside claude.ai, where the page cannot open the camera ---------- */
+let vidBusy = false;
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+async function grabFrames(file, n) {
+  const url = URL.createObjectURL(file);
+  const v = document.createElement("video");
+  v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+  const seek = (t) => new Promise((r) => { v.onseeked = () => r(); v.currentTime = t; setTimeout(r, 6000); });
+  try {
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error("video")); setTimeout(() => rej(new Error("timeout")), 20000); });
+    let dur = v.duration;
+    if (!isFinite(dur)) { await seek(1e9); dur = v.duration; }   // recordings without a duration header
+    if (!isFinite(dur) || dur <= 0) return { frames: [], dur: null };
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const t = Math.min(dur - 0.2, dur * (i + 0.5) / n);
+      await seek(Math.max(0, t));
+      const k = Math.min(1, 640 / (v.videoWidth || 640));
+      const c = document.createElement("canvas");
+      c.width = Math.round((v.videoWidth || 0) * k); c.height = Math.round((v.videoHeight || 0) * k);
+      if (!c.width) break;
+      c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+      const b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.8));
+      if (b) out.push({ blob: b, t: v.currentTime });
+    }
+    return { frames: out, dur };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function audioStats(file) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();
+  try {
+    const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+    const data = audio.getChannelData(0), hop = Math.round(audio.sampleRate * 0.1);
+    const dbs = [];
+    for (let i = 0; i + hop <= data.length; i += hop) {
+      let s = 0; for (let j = i; j < i + hop; j += 4) s += data[j] * data[j];
+      dbs.push(20 * Math.log10(Math.sqrt(s / (hop / 4)) + 1e-9));
+    }
+    const sorted = [...dbs].sort((a, b) => a - b);
+    const thr = Math.max(-50, (sorted[Math.floor(sorted.length * 0.1)] ?? -60) + 10);
+    let voiced = 0, sum = 0, sq = 0, run = 0, longSil = 0, started = false;
+    for (const d of dbs) {
+      if (d > thr) { voiced++; sum += d; sq += d * d; if (run >= 25) longSil++; run = 0; started = true; }
+      else if (started) run++;
+    }
+    const mean = voiced ? sum / voiced : 0;
+    return { dur: audio.duration, talkSec: voiced * 0.1, longSil,
+      loudVar: voiced ? +Math.sqrt(Math.max(0, sq / voiced - mean * mean)).toFixed(1) : null };
+  } finally { ctx.close().catch(() => {}); }
+}
+async function analyzeVideo(file) {
+  const st = $("#vid-status");
+  const say = (m, err) => { st.className = "status-line" + (err ? " err" : ""); st.textContent = m; };
+  if (vidBusy) return;
+  if (["answer", "thinking", "starting", "done", "error"].includes(iv.phase)) { say("모의 면접을 마친 뒤 영상을 올려 주세요.", true); return; }
+  if (!/^video\//.test(file.type) && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) { say("동영상 파일을 올려 주세요.", true); return; }
+  if (file.size > 2e9) { say("영상이 너무 커요. 2GB 이하로 올려 주세요.", true); return; }
+  vidBusy = true; $("#vid-drop").classList.add("busy");
+  try {
+    say("영상에서 장면을 고르고 있어요…");
+    let frames = [], vdur = null;
+    try { const r = await grabFrames(file, 8); frames = r.frames; vdur = r.dur; } catch {}
+    say("소리를 분석하고 있어요. 긴 영상은 1분쯤 걸려요…");
+    let a = null;
+    try { a = await audioStats(file); } catch {}
+    if (!frames.length && !a) { say("영상을 읽지 못했어요. 카메라 앱에서 저장한 MP4 파일을 올려 주세요.", true); return; }
+    const dur = a ? a.dur : vdur;
+    const log = iv.log || [];
+    const syl = (log.flatMap((x) => x.answers).join(" ").match(/[가-힣A-Za-z0-9]/g) || []).length;
+    const m = {};
+    if (a) { m.loudVar = a.loudVar; if (syl > 30 && a.talkSec > 10) m.spm = Math.round(syl / (a.talkSec / 60)); }
+    const thumbs = frames.map((f) => ({ url: URL.createObjectURL(f.blob), t: f.t }));
+    const canAI = !!sampleFn;
+    iv.phase = "end";
+    $("#mock-stage").innerHTML = `
+      <div class="stage">
+        <div class="stage-top"><span>녹화 영상 분석</span><span>${esc(file.name)}</span></div>
+        <h3>영상 ${dur ? mmss(dur) : ""}${a ? ` · 말한 시간 ${mmss(a.talkSec)} (${Math.round(a.talkSec / Math.max(1, a.dur) * 100)}%)` : ""}</h3>
+        ${metricsHTML(m)}
+        ${a ? `<p class="hint" style="margin:0">2.5초 넘게 조용했던 구간 ${a.longSil}번 (질문을 듣거나 기다린 시간도 포함돼요).${m.spm == null ? " 말 속도는 같은 화면에서 모의 면접을 한 직후에 올리면 답변 글자 수로 계산해요." : ""}</p>` : ""}
+        ${thumbs.length ? `<div><p class="sec-title">AI가 볼 장면</p><div class="frames">${thumbs.map((x, i) => `<figure><img src="${x.url}" alt="장면 ${i + 1}"><figcaption>장면 ${i + 1} · ${mmss(x.t)}</figcaption></figure>`).join("")}</div></div>` : `<p class="hint">영상 장면은 읽지 못해 소리만 분석했어요.</p>`}
+        <div><p class="sec-title">AI 태도 분석</p><div class="feedback" id="vid-fb">${canAI ? "장면과 지표를 보고 있어요…" : "AI를 쓸 수 없어서 측정 지표만 보여 줘요."}</div></div>
+        <div class="stage-actions"><button class="btn" id="vid-again">다른 영상 올리기</button></div>
+      </div>`;
+    $("#vid-again").onclick = () => $("#vid-file").click();
+    say("분석 화면을 열었어요.");
+    if (!canAI) return;
+    const lim = await sampleFn.limits().catch(() => null);
+    const maxImg = lim && lim.images ? Math.min(6, lim.images.maxCount || 1) : 0;
+    const pick = maxImg ? frames.filter((_, i) => i % Math.ceil(frames.length / maxImg) === 0).slice(0, maxImg) : [];
+    const prompt = `당신은 채용 면접 태도 코치입니다. 아래는 지원자가 모의 면접을 하는 모습을 녹화한 영상에서 시간 순서대로 고른 장면 ${pick.length}장${a ? "과, 영상 소리에서 자동으로 측정한 지표" : ""}입니다. 비언어적 표현과 말하기 습관을 평가하세요.
+
+${pick.length ? `[장면 시간] ${pick.map((f, i) => `장면 ${i + 1}: ${mmss(f.t)}`).join(", ")}` : "[장면 없음]"}
+[영상 길이] ${dur ? mmss(dur) : "알 수 없음"}
+${a ? `[소리 지표] 말한 시간 ${mmss(a.talkSec)}, 목소리 크기 변화 ${a.loudVar}dB(2dB 미만이면 단조로움), 2.5초 넘게 조용한 구간 ${a.longSil}번(질문을 듣거나 기다린 시간이 섞여 있음)${m.spm != null ? `, 추정 말 속도 ${m.spm}음절/분(250~350이 듣기 편함)` : ""}` : ""}
+${log.length ? `[이번 모의 면접 문답]\n${log.map((x, i) => `${i + 1}. ${x.q}\n   답변: ${x.answers.join(" / ").slice(0, 600)}`).join("\n")}` : ""}
+
+지표는 자동 측정이라 오차가 있으니 단정하지 말고 경향으로 말하세요. 장면마다 다른 점이 보이면 몇 번째 장면인지 말하세요.
+한국어로, 마크다운 기호(#, *, **) 없이 아래 형식으로 간결하게 쓰세요.
+종합: 2문장
+시선: 1~2문장
+표정: 1~2문장
+자세와 손동작: 1~2문장
+복장·배경·조명: 1문장
+말하기: 1~2문장
+가장 먼저 고칠 점:
+- 3가지
+연습 방법:
+- 2~3가지`;
+    const el = $("#vid-fb");
+    try {
+      const { text } = await sampleFn(prompt, { images: pick.map((f) => f.blob), cache: false, onText: ({ text }) => { if (el.isConnected) el.textContent = text; } });
+      const f = F();
+      if (f) { f.videoReviews = (f.videoReviews || []).concat([{ at: Date.now(), dur: dur ? Math.round(dur) : null, metrics: m, feedback: text.slice(0, 3000) }]).slice(-10); saveFolderSoon(f.id, 300); }
+    } catch (e) {
+      if (el.isConnected) { el.classList.add("err"); el.textContent = aiError(e, "태도 분석을 받지 못했어요."); }
+    }
+  } finally { vidBusy = false; $("#vid-drop").classList.remove("busy"); }
+}
+{
+  const drop = $("#vid-drop");
+  drop.addEventListener("click", () => $("#vid-file").click());
+  drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#vid-file").click(); } });
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) analyzeVideo(f); });
+  $("#vid-file").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) analyzeVideo(f); e.target.value = ""; });
 }
 $("#md-test").addEventListener("click", async () => {
   const st = $("#md-status");
@@ -3487,6 +3826,8 @@ $("#md-test").addEventListener("click", async () => {
     st.textContent = e && e.name === "NotAllowedError" ? "권한이 거부됐어요. 주소창 왼쪽 아이콘에서 카메라·마이크를 허용해 주세요." : "카메라나 마이크를 찾지 못했어요.";
   }
 });
+["#mock-prep", "#mock-prep-follow"].forEach((s) => $(s).addEventListener("change", () => lsSet("ir-prep", { sec: $("#mock-prep").value, follow: $("#mock-prep-follow").checked })));
+{ const pp = lsGet("ir-prep"); if (pp) { $("#mock-prep").value = String(pp.sec ?? "10"); $("#mock-prep-follow").checked = !!pp.follow; } }
 ["#md-cam", "#md-stt", "#md-tts"].forEach((s) => $(s).addEventListener("change", () => {
   lsSet("ir-media", { cam: $("#md-cam").checked, stt: $("#md-stt").checked, tts: $("#md-tts").checked });
 }));

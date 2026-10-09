@@ -415,6 +415,14 @@ header.top { align-items: center; }
 .prep b { font-family: var(--font-mono); font-size: 2rem; line-height: 1; color: var(--accent); min-width: 1.6em; text-align: center; font-variant-numeric: tabular-nums; }
 .prep span { flex: 1; font-size: .9rem; }
 
+/* model answer editing */
+.ans-edit { display: grid; gap: 8px; }
+.ans-edit textarea { width: 100%; resize: vertical; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); line-height: 1.7; font: inherit; }
+.ans-edit .ae-a { min-height: 180px; }
+.ans-edit .ae-p { min-height: 70px; font-size: .9rem; }
+.ae-pl { display: grid; gap: 4px; font-size: .84rem; font-weight: 500; }
+.ae-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* voice typing help */
 .voice-help { font-size: .84rem; }
 .voice-help summary { cursor: pointer; font-weight: 600; color: var(--accent); }
@@ -1161,7 +1169,7 @@ function renderList() {
           <div class="meta"><span>소리 내어 읽으면 약 ${Math.max(0, Math.round((p.my || "").replace(/\s/g, "").length / 5.5))}초</span><span data-len="${x.id}">${(p.my || "").length}자</span></div>
         </div>
         <div class="answer ${locked ? "locked" : ""}">
-          <div class="answer-inner">${answerHTML(x)}</div>
+          <div class="answer-inner">${state.editingAns === x.id && !locked ? answerEditHTML(x) : answerHTML(x)}</div>
           ${locked ? `<div class="reveal"><button class="btn primary" data-reveal="${x.id}">모범 답안 보기</button></div>` : ""}
         </div>
         ${fb ? `<div class="feedback ${fb.err ? "err" : ""}" data-fb="${x.id}">${esc(fb.text)}</div>` : ""}
@@ -1175,6 +1183,7 @@ function renderList() {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn primary" data-practice="${x.id}">꼬리질문 연습</button>
+            ${!locked && state.editingAns !== x.id ? `<button class="btn" data-ae-open="${x.id}">모범 답안 수정</button>` : ""}
             ${!locked ? `<button class="btn ghost" data-hide="${x.id}">답안 가리기</button>` : ""}
             ${sampleFn ? (fb && fb.busy
               ? `<button class="btn" data-stopfb="${x.id}">멈추기</button>`
@@ -1201,17 +1210,64 @@ function renderList() {
 }
 
 /* Built-in 인성 answers can be rewritten from the current folder's resume. */
+/* Which model answer to show: my own edit > resume-tailored > the original.
+   Built-in questions keep edits per folder; custom questions are edited in place (original kept in aOrig). */
+const myEdit = (x) => { const f = F(); return !x.custom && f && f.myAnswers && f.myAnswers[x.id]; };
 const ansOf = (x) => {
-  const f = F();
-  return (!x.custom && f && f.tailored && f.tailored[x.id]) || x.a;
+  const f = F(); const e = myEdit(x);
+  return (e && e.a) || (!x.custom && f && f.tailored && f.tailored[x.id]) || x.a;
 };
+const pointsOf = (x) => { const e = myEdit(x); return (e && e.points) || x.points || []; };
+const isEdited = (x) => !!myEdit(x) || (x.custom && x.aOrig != null);
 function answerHTML(x) {
-  const tailored = ansOf(x) !== x.a;
+  const edited = isEdited(x);
+  const tailored = !edited && ansOf(x) !== x.a;
+  const base = x.custom ? x.aOrig : x.a;
+  const pts = pointsOf(x);
   return `
-    <h4>모범 답안${tailored ? `<span class="tag">내 자소서 맞춤</span>` : ""}</h4>
+    <h4>모범 답안${edited ? `<span class="tag">내가 수정함</span>` : tailored ? `<span class="tag">내 자소서 맞춤</span>` : ""}</h4>
     <p>${esc(ansOf(x))}</p>
-    ${x.points && x.points.length ? `<ul>${x.points.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
-    ${tailored ? `<details class="base-answer"><summary>기본 모범 답안 보기</summary><p>${esc(x.a)}</p></details>` : ""}`;
+    ${pts.length ? `<ul>${pts.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${(edited || tailored) && base ? `<details class="base-answer"><summary>원래 모범 답안 보기</summary><p>${esc(base)}</p></details>` : ""}`;
+}
+const draftOr = (k, v) => (state.aeDraft && state.aeDraft[k] != null ? state.aeDraft[k] : v);
+function answerEditHTML(x) {
+  const p = prog(x.id);
+  return `
+    <div class="ans-edit">
+      <h4>모범 답안 수정</h4>
+      <textarea id="ae-a-${x.id}" class="ae-a">${esc(draftOr("ae-a-" + x.id, ansOf(x)))}</textarea>
+      <label class="ae-pl">핵심 포인트 <span class="hint">(줄마다 하나)</span>
+        <textarea id="ae-p-${x.id}" class="ae-p">${esc(draftOr("ae-p-" + x.id, pointsOf(x).join("\n")))}</textarea>
+      </label>
+      <div class="ae-actions">
+        <button class="btn primary" type="button" data-ae-save="${x.id}">저장</button>
+        <button class="btn ghost" type="button" data-ae-cancel="${x.id}">취소</button>
+        ${(p.my || "").trim() ? `<button class="btn" type="button" data-ae-mine="${x.id}" title="‘내 답변’ 칸의 글을 가져와요">내 답변 가져오기</button>` : ""}
+        ${isEdited(x) ? `<button class="btn ghost danger" type="button" data-ae-reset="${x.id}">원래 답안으로 되돌리기</button>` : ""}
+      </div>
+    </div>`;
+}
+function saveAnswerEdit(id, a, points) {
+  const f = F(); const x = allQ().find((y) => y.id === id); if (!x) return;
+  if (x.custom) {
+    const c = state.custom.find((y) => y.id === id);
+    if (c.aOrig == null) { c.aOrig = c.a; c.pointsOrig = c.points || []; }
+    c.a = a; c.points = points;
+    flush("custom");
+  } else if (f) {
+    f.myAnswers = { ...(f.myAnswers || {}), [id]: { a, points, at: Date.now() } };
+    saveFolderSoon(f.id, 200);
+  }
+}
+function resetAnswerEdit(id) {
+  const f = F(); const x = allQ().find((y) => y.id === id); if (!x) return;
+  if (x.custom) {
+    const c = state.custom.find((y) => y.id === id);
+    if (c.aOrig != null) { c.a = c.aOrig; c.points = c.pointsOrig || []; delete c.aOrig; delete c.pointsOrig; flush("custom"); }
+  } else if (f && f.myAnswers) {
+    const { [id]: _, ...rest } = f.myAnswers; f.myAnswers = rest; saveFolderSoon(f.id, 200);
+  }
 }
 const parseScore = (t) => { const m = /점수\s*[:：]\s*(\d+(?:\.\d+)?)/.exec(t || ""); return m ? Math.min(10, +m[1]) : null; };
 function recordScore(id, score, feedback, extra) {
@@ -1236,7 +1292,21 @@ $("#qlist").addEventListener("click", (e) => {
   const d = b.dataset;
   if (d.toggle) { state.open.has(d.toggle) ? state.open.delete(d.toggle) : state.open.add(d.toggle); renderList(); }
   else if (d.reveal) { state.revealed.add(d.reveal); renderList(); }
-  else if (d.hide) { state.revealed.delete(d.hide); renderList(); }
+  else if (d.hide) { state.revealed.delete(d.hide); if (state.editingAns === d.hide) state.editingAns = null; renderList(); }
+  else if (d.aeOpen) { state.aeDraft = {}; state.editingAns = d.aeOpen; renderList(); const ta = $("#ae-a-" + d.aeOpen); if (ta) ta.focus(); }
+  else if (d.aeCancel) { state.editingAns = null; state.aeDraft = {}; renderList(); }
+  else if (d.aeMine) { const ta = $("#ae-a-" + d.aeMine); if (ta) { ta.value = prog(d.aeMine).my || ""; ta.focus(); } }
+  else if (d.aeSave) {
+    const a = ($("#ae-a-" + d.aeSave).value || "").trim();
+    if (!a) { $("#ae-a-" + d.aeSave).focus(); return; }
+    const points = ($("#ae-p-" + d.aeSave).value || "").split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 8);
+    saveAnswerEdit(d.aeSave, a, points);
+    state.editingAns = null; state.aeDraft = {}; renderList();
+  }
+  else if (d.aeReset) {
+    if (!b.dataset.confirm) { b.dataset.confirm = "1"; b.textContent = "정말 되돌리기"; return; }
+    resetAnswerEdit(d.aeReset); state.editingAns = null; renderList();
+  }
   else if (d.setst) { setStatus(d.setst, +d.v); renderList(); }
   else if (d.goto) { switchView(d.goto); }
   else if (d.ai) { askFeedback(d.ai); }
@@ -1310,6 +1380,7 @@ $("#more-q").addEventListener("click", async () => {
   renderList();
 });
 $("#qlist").addEventListener("input", (e) => {
+  if (/^ae-[ap]-/.test(e.target.id || "")) { state.aeDraft = { ...(state.aeDraft || {}), [e.target.id]: e.target.value }; return; }
   const id = e.target.dataset.my; if (!id) return;
   state.progress[id] = { ...prog(id), my: e.target.value, t: Date.now() };
   const len = document.querySelector(`[data-len="${id}"]`); if (len) len.textContent = e.target.value.length + "자";
